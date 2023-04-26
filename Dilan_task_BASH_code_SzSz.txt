@@ -1,0 +1,60 @@
+# Doing the data preparation in Bash
+#Step 1: making a new folder for the data
+mkdir dilan
+
+#Step 1: going into the new folder and getting the data (during all the next steps, I was in this folder)
+cd dilan
+wget 46.101.230.157/testtask/dilans_data.csv
+
+#Step 3: checking the data
+#Step 3.1: do we have all the data from 01-01-2018 to 31-03-2018
+head dilans_data.csv
+tail dilans_data.csv
+
+#Step 3.2: checking the amount of the data --it needs to be cca 600 k rows
+wc -l dilans_data.csv  				# 597902 dilans_data.csv is the result
+
+#Step 4: separating the data for different files according to Dilan's funnel
+#Step 4.1: separating the readers (new and returning together first), filtering by event = read
+grep 'read' dilans_data.csv > read_temp.csv
+
+#Step 4.1.1: separating the new readers from the readers, filtering: where source information is available
+grep -E 'SEO|AdWords|Reddit' read_temp.csv > new_readers.csv
+
+#Step 4.1.2: checking the data: only the new readers have in the file, and how many rows we have
+cat new_readers.csv
+wc -l new_readers.csv 				#210023 new_readers.csv  is the result
+
+# Step 4.1.3: separating the returning readers from the readers, filtering: where source info is not available
+grep -v -E 'SED|AdWords|Reddit' read_temp.csv > returning_readers.csv
+
+#Step 4.1.4: checking the data: only the returning readers have in the file, and how many rows we have
+cat returning_readers.csv
+wc -l returning_readers.csv 		#371854 returning_readers.csv is the result
+
+#Step 4.2: separating the subscribers, filtering by 'subscribe' event
+grep 'subscribe' dilans_data.csv > subscribers.csv
+
+#Step 4.2.1: checking the data: only the subscribers have in the file, and how many rows we have
+cat subscribers.csv
+wc -l subscribers.csv				#7618 subscribers.csv is the result
+
+#Step 4.3: separating the customers, filtering by 'buy' event
+grep 'buy' dilans_data.csv > customers.csv
+
+#Step 4.2.1: checking the data: only the customers have in the file, and how many rows we have
+cat customers.csv
+wc -l customers.csv					#8407 customers.csv is the result
+
+#Step 5: double checking that we have all the data in the separated files
+wc -l dilans_data.csv				#597902 dilans_data.csv is the result
+
+wc -l new_readers.csv returning_readers.csv subscribers.csv customers.csv
+
+									# the results:
+									# 210023 new_readers.csv
+									# 371854 returning_readers.csv
+									# 7618 subscribers.csv
+									# 8407 customers.csv
+									# 597902 total
+

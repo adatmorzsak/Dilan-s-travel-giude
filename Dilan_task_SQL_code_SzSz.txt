@@ -1,0 +1,286 @@
+--Dilan's traveler blog task solution
+--STEP 1. create tables for basic data analysis
+
+--1.1 create table for the new readers
+CREATE TABLE new_readers
+(
+event_date      TIMESTAMP,
+event_type      TEXT,
+country         TEXT,
+user_id         BIGINT, 
+--azért BIGINT, mert 10 számjegy
+source          TEXT,
+topic           TEXT,
+PRIMARY KEY (user_id)
+);
+
+--1.2 create table for returning readers
+CREATE TABLE returning_readers
+(
+event_date      TIMESTAMP,
+event_type      TEXT,
+country         TEXT,
+user_id         BIGINT, 
+topic           TEXT
+);
+
+--1.3 create table for newsletter subscribers
+CREATE TABLE subscribers
+(
+event_date      TIMESTAMP,
+event_type      TEXT,
+user_id         BIGINT 
+);
+
+--1.4 create table for those, who pay for any of the products
+CREATE TABLE customers
+(
+event_date      TIMESTAMP,
+event_type      TEXT,
+user_id         BIGINT,
+price           SMALLINT
+);
+
+--1.5 checking whether every table exists
+SELECT * FROM new_readers;
+SELECT * FROM returning_readers;
+SELECT * FROM subscribers;
+SELECT * FROM customers;
+
+
+--STEP 2. loading the prepared data into the tables
+
+--2.1 loading the new readers' data
+COPY new_readers
+FROM '/home/szilvia/dilan/new_readers.csv'
+DELIMITER ';';
+
+--2.2 loading the returning readers' data
+COPY returning_readers
+FROM '/home/szilvia/dilan/returning_readers.csv'
+DELIMITER ';';
+
+--2.3 loading the subscribers' data
+COPY subscribers
+FROM '/home/szilvia/dilan/subscribers.csv'
+DELIMITER ';';
+
+--2.4 loading the customers' data
+COPY customers
+FROM '/home/szilvia/dilan/customers.csv'
+DELIMITER ';';
+
+--2.5 checking: is the data there? do we have every row?
+SELECT * FROM new_readers LIMIT 20;
+SELECT * FROM returning_readers LIMIT 20;
+SELECT * FROM subscribers LIMIT 20;
+SELECT * FROM customers LIMIT 20;
+    
+SELECT COUNT(*) FROM new_readers;
+SELECT COUNT(*) FROM returning_readers;
+SELECT COUNT(*) FROM subscribers;
+SELECT COUNT(*) FROM customers;
+
+
+--STEP 3. Client segmentation
+--3.1 checking in which table have more events than distinct user  --> in the returning_readers and in the customers table
+
+SELECT COUNT (user_id) AS new_reading_events, COUNT (DISTINCT user_id) AS new_readers
+FROM new_readers;
+
+SELECT COUNT (user_id) AS returning_reading_events, COUNT (DISTINCT user_id) AS returning_readers
+FROM returning_readers;
+
+SELECT COUNT (user_id) AS subscribing_events, COUNT (DISTINCT user_id) AS subscribers
+FROM subscribers;
+
+SELECT COUNT (user_id) AS buying_events, COUNT (DISTINCT user_id) AS customers
+FROM customers;
+
+
+--3.2 Number of (distinct) clients aka funnel analysis
+SELECT COUNT (user_id) AS new_readers,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS returning_readers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS subscribers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS customers
+FROM new_readers;
+
+
+--3.3 Number of (distinct) clients by country
+--order by number of returning readers, because this is the first step, where a client could be committed
+SELECT country,
+       COUNT (user_id) AS new_readers,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS returning_readers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS subscribers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS customers
+FROM new_readers
+GROUP BY country
+ORDER BY returning_readers DESC;
+
+
+--3.4 Number of (distinct) clients by source
+--order by new readers, because they are targeted by the sources
+SELECT source,
+       COUNT (user_id) AS new_readers,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS returning_readers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS subscribers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS customers
+FROM new_readers
+GROUP BY source
+ORDER BY new_readers DESC;
+
+
+--3.5 Number of (distinct) clients by topic
+SELECT topic,
+       COUNT (user_id) AS new_readers,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS returning_readers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS subscribers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS customers
+FROM new_readers
+GROUP BY topic;
+
+
+--3.6 Number of (distinct) clients by source + topic
+SELECT source, topic,
+       COUNT (user_id) AS new_readers,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS returning_readers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS subscribers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS customers
+FROM new_readers
+GROUP BY source, topic;
+
+
+--3.7 Number of (distinct) clients by source + country
+SELECT source, country,
+       COUNT (user_id) AS new_readers,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS returning_readers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS subscribers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS customers
+FROM new_readers
+GROUP BY source, country;
+
+
+--3.8 Number of (distinct) clients by topic + country
+SELECT topic, country,
+       COUNT (user_id) AS new_readers,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS returning_readers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS subscribers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS customers
+FROM new_readers
+GROUP BY topic, country;
+
+
+--3.9 Number of (distinct) clients by source + country +topic 
+SELECT source, country, topic,
+       COUNT (user_id) AS new_readers,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS returning_readers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS subscribers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS customers
+FROM new_readers
+GROUP BY source, country, topic;
+
+
+--3.10 Number of (distinct) clients by source + country +topic, for the most relevant source (Reddit) and country (country_5)
+SELECT source, country, topic,
+       COUNT (user_id) AS new_readers,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS returning_readers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS subscribers,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS customers
+FROM new_readers
+WHERE source = 'Reddit' AND country = 'country_5'
+GROUP BY source, country, topic;
+
+
+--STEP 4: Daily client data
+--4.1 from the users registered on a given day, how many went to the next step
+SELECT CAST (event_date AS date) AS registration_day, 
+       COUNT (user_id) AS given_day_NR,
+       COUNT (CASE WHEN user_id IN (SELECT DISTINCT (user_id) FROM returning_readers) THEN user_id END) AS given_day_RR,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM subscribers) THEN user_id END) AS given_day_SUB,
+       COUNT (CASE WHEN user_id IN (SELECT user_id FROM customers) THEN user_id END) AS given_day_CUST
+FROM new_readers
+GROUP BY registration_day;
+
+--4.2 daily client numbers
+SELECT rr.day AS day, nr.new_readers AS daily_new_readers, rr.returning_readers AS daily_returning_readers, sub.subscribers AS daily_subscribers, cust.customers AS daily_customers
+FROM
+  (SELECT CAST(event_date AS date) AS day, COUNT(user_id) AS new_readers
+  FROM new_readers
+  GROUP BY day) AS nr
+FULL JOIN 
+  (SELECT CAST(event_date AS date) AS day, COUNT(DISTINCT user_id) AS returning_readers
+  FROM returning_readers
+  GROUP BY day) AS rr
+ON rr.day = nr.day
+FULL JOIN
+  (SELECT CAST(event_date AS date) AS day, COUNT(user_id) AS subscribers
+  FROM subscribers
+  GROUP BY day) AS sub
+ON rr.day = sub.day
+FULL JOIN 
+  (SELECT CAST(event_date AS date) AS day, COUNT(DISTINCT user_id) AS customers
+  FROM customers
+  GROUP BY day) AS cust
+ON rr.day = cust.day
+ORDER BY day;
+
+--STEP 5: Sales data analysis
+--5.1 number of unique customers for the 8 and 80 dollars product
+SELECT price AS product, COUNT(*) AS sales_event, COUNT(DISTINCT user_id) AS dist_cust --, COUNT(price) AS sold_pieces, SUM(price) AS revenue
+FROM customers
+GROUP BY product;
+
+
+--5.2 sum sold piece and sum revenue for e-books and video courses
+SELECT 
+    SUM (CASE WHEN price = 8 THEN 1 END) AS e_book_sold,
+    SUM (CASE WHEN price = 8 THEN price END) AS e_book_revenue,
+    SUM (CASE WHEN price = 80 THEN 1 END) AS video_course_sold,
+    SUM (CASE WHEN price = 80 THEN price END) AS video_course_revenue
+FROM customers;
+
+
+--5.3 daily product sales  (for pieces)
+SELECT CAST(event_date AS date) AS day, 
+        SUM (CASE WHEN price = 8 THEN 1 END) AS e_book_sold,
+        SUM (CASE WHEN price = 80 THEN 1 END) AS video_course_sold       
+FROM customers
+GROUP BY day
+ORDER BY day;
+
+--5.4 daily revenue per product 
+SELECT CAST(event_date AS date) AS day, 
+        SUM (CASE WHEN price = 8 THEN price END) AS e_book_revenue,
+        SUM (CASE WHEN price = 80 THEN price END) AS video_course_revenue       
+FROM customers
+GROUP BY day
+ORDER BY day;
+
+
+--5.5 daily revenue
+SELECT CAST(event_date AS date) AS day, SUM(price) AS daily_revenue
+FROM customers
+GROUP BY day
+ORDER BY day;
+
+
+--5.6 how much is the revenue per source
+SELECT nr.source,
+    SUM (CASE WHEN price = 8 THEN price END) AS ebook_revenue,
+    SUM (CASE WHEN price = 80 THEN price END) AS video_course_revenue,
+    SUM (price) AS sum_revenue
+FROM new_readers AS nr
+INNER JOIN customers AS c
+ON nr.user_id = c.user_id
+GROUP BY nr.source
+ORDER BY sum_revenue DESC;
+
+
+--5.7 revenue by country
+SELECT country, SUM (price) AS revenue
+FROM new_readers AS nr
+INNER JOIN customers AS c
+ON nr.user_id = c.user_id
+--WHERE country = 'country_2' OR country = 'country_5' OR country = 'country_7'
+GROUP BY country
+ORDER BY country;
